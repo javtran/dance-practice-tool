@@ -23,10 +23,12 @@ export default function LoopBar({ videoRef, duration }) {
   const [loopB, setLoopB] = useState(0);
   const [inputA, setInputA] = useState("0:00");
   const [inputB, setInputB] = useState("0:00");
+  const [playhead, setPlayhead] = useState(0);
 
   const barRef = useRef(null);
   const dragging = useRef(null); // 'A' | 'B' | null
   const draggingRegion = useRef(null); // { startX, startA, startB } | null
+  const playheadDragging = useRef(false);
   const loopARef = useRef(0);
   const loopBRef = useRef(0);
   const durationRef = useRef(duration);
@@ -48,12 +50,10 @@ export default function LoopBar({ videoRef, duration }) {
   function updateA(val) {
     loopARef.current = val;
     setLoopA(val);
-    if (videoRef.current) videoRef.current.currentTime = val;
   }
   function updateB(val) {
     loopBRef.current = val;
     setLoopB(val);
-    if (videoRef.current) videoRef.current.currentTime = loopARef.current;
   }
 
   // When loop is first enabled, set A/B to 25%/75% of duration
@@ -68,13 +68,16 @@ export default function LoopBar({ videoRef, duration }) {
     }
   }, [enabled, duration]);
 
-  // Loop enforcement — uses refs so interval never goes stale
+  // Loop enforcement + playhead sync
   useEffect(() => {
-    if (!enabled || !videoRef.current) return;
+    if (!videoRef.current) return;
     const id = setInterval(() => {
       const t = videoRef.current.currentTime;
-      if (t >= loopBRef.current || t < loopARef.current) {
+      if (enabled && !videoRef.current.paused && (t >= loopBRef.current || t < loopARef.current)) {
         videoRef.current.currentTime = loopARef.current;
+      }
+      if (!playheadDragging.current) {
+        setPlayhead(videoRef.current.currentTime);
       }
     }, 100);
     return () => clearInterval(id);
@@ -106,6 +109,14 @@ export default function LoopBar({ videoRef, duration }) {
   // Register global mouse listeners once — everything reads from refs
   useEffect(() => {
     function onMouseMove(e) {
+      // Playhead drag
+      if (playheadDragging.current) {
+        const t = getPositionFromMouse(e.clientX);
+        setPlayhead(t);
+        videoRef.current.currentTime = t;
+        return;
+      }
+
       if (draggingRegion.current) {
         const rect = barRef.current.getBoundingClientRect();
         const delta =
@@ -145,6 +156,8 @@ export default function LoopBar({ videoRef, duration }) {
     }
 
     function onMouseUp() {
+      playheadDragging.current = false;
+
       if (draggingRegion.current) {
         draggingRegion.current = null;
         return;
@@ -186,6 +199,7 @@ export default function LoopBar({ videoRef, duration }) {
 
   const pctA = duration > 0 ? (loopA / duration) * 100 : 25;
   const pctB = duration > 0 ? (loopB / duration) * 100 : 75;
+  const pctPlayhead = duration > 0 ? (playhead / duration) * 100 : 0;
 
   return (
     <div className="loop-bar-wrapper">
@@ -196,9 +210,9 @@ export default function LoopBar({ videoRef, duration }) {
         Loop {enabled ? "On" : "Off"}
       </button>
 
-      {enabled && (
-        <>
-          <div className="loop-bar" ref={barRef}>
+      <div className="loop-bar" ref={barRef}>
+        {enabled && (
+          <>
             <div
               className="loop-region"
               style={{ left: `${pctA}%`, width: `${pctB - pctA}%` }}
@@ -214,39 +228,50 @@ export default function LoopBar({ videoRef, duration }) {
               style={{ left: `${pctB}%` }}
               onMouseDown={handleMarkerMouseDown("B")}
             />
-          </div>
+          </>
+        )}
+        <div
+          className="loop-playhead"
+          style={{ left: `${pctPlayhead}%` }}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            playheadDragging.current = true;
+          }}
+        />
+      </div>
 
-          <div className="loop-timestamps">
-            <label>
-              A:
-              <input
-                value={inputA}
-                onChange={(e) => setInputA(e.target.value)}
-                onBlur={(e) => handleInputCommit("A", e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleInputCommit("A", e.target.value);
-                  }
-                }}
-              />
-            </label>
-            <label>
-              B:
-              <input
-                value={inputB}
-                onChange={(e) => setInputB(e.target.value)}
-                onBlur={(e) => handleInputCommit("B", e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleInputCommit("B", e.target.value);
-                  }
-                }}
-              />
-            </label>
-          </div>
-        </>
+      {enabled && (
+        <div className="loop-timestamps">
+          <label>
+            A:
+            <input
+              value={inputA}
+              onChange={(e) => setInputA(e.target.value)}
+              onBlur={(e) => handleInputCommit("A", e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleInputCommit("A", e.target.value);
+                }
+              }}
+            />
+          </label>
+          <label>
+            B:
+            <input
+              value={inputB}
+              onChange={(e) => setInputB(e.target.value)}
+              onBlur={(e) => handleInputCommit("B", e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleInputCommit("B", e.target.value);
+                }
+              }}
+            />
+          </label>
+        </div>
       )}
     </div>
   );
