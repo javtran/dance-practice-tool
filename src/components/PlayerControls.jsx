@@ -6,7 +6,7 @@ function toMSS(seconds) {
   return `${m}:${s}`;
 }
 
-export default function PlayerControls({ videoRef, playerPanelRef, duration }) {
+export default function PlayerControls({ videoRef, playerPanelRef, duration, mediaReady = true }) {
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [volume, setVolume] = useState(1);
@@ -29,15 +29,18 @@ export default function PlayerControls({ videoRef, playerPanelRef, duration }) {
       video.removeEventListener("pause", onPause);
       video.removeEventListener("click", onClick);
     };
-  }, [videoRef.current]);
+  }, [mediaReady]);
 
-  // Poll currentTime
+  // Poll currentTime + sync playing state (covers YT where DOM events are no-ops)
   useEffect(() => {
+    if (!mediaReady) return;
     const id = setInterval(() => {
-      if (videoRef.current) setCurrentTime(videoRef.current.currentTime);
+      if (!videoRef.current) return;
+      setCurrentTime(videoRef.current.currentTime);
+      setPlaying(!videoRef.current.paused);
     }, 100);
     return () => clearInterval(id);
-  }, []);
+  }, [mediaReady]);
 
   function togglePlay() {
     const video = videoRef.current;

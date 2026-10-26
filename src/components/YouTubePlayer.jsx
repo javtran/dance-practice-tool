@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from "react";
+import LoopBar from "./LoopBar";
+import PlayerControls from "./PlayerControls";
 
 // Load the YouTube IFrame API
 function loadYTApi(onReady) {
@@ -14,7 +16,6 @@ function loadYTApi(onReady) {
     document.head.appendChild(tag);
   }
 
-  // YouTube calls this global function when the API is ready
   window.onYouTubeIframeAPIReady = onReady;
 }
 
@@ -23,17 +24,41 @@ function extractVideoId(url) {
   return match ? match[1] : null;
 }
 
-const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2];
+// Adapter: wraps YT.Player behind the same interface as a native <video> element.
+// LoopBar and PlayerControls speak only to this object — they never know it's YouTube.
+function createYTAdapter(playerRef) {
+  return {
+    get currentTime()     { return playerRef.current.getCurrentTime() },
+    set currentTime(t)    { playerRef.current.seekTo(t, true) },
+    get paused()          { return playerRef.current.getPlayerState() !== window.YT.PlayerState.PLAYING },
+    get duration()        { return playerRef.current.getDuration() },
+    play()                { playerRef.current.playVideo() },
+    pause()               { playerRef.current.pauseVideo() },
+    get playbackRate()    { return playerRef.current.getPlaybackRate() },
+    set playbackRate(n)   { playerRef.current.setPlaybackRate(n) },
+    get volume()          { return playerRef.current.getVolume() / 100 },
+    set volume(n)         { playerRef.current.setVolume(n * 100) },
+    get muted()           { return playerRef.current.isMuted() },
+    set muted(v)          { v ? playerRef.current.mute() : playerRef.current.unMute() },
+    // YT uses onStateChange instead of DOM events — no-ops keep PlayerControls happy
+    addEventListener()    {},
+    removeEventListener() {},
+    style:                {},
+  };
+}
 
 export default function YouTubePlayer() {
   const [input, setInput] = useState("");
   const [videoId, setVideoId] = useState(null);
   const [error, setError] = useState("");
-  const [speed, setSpeed] = useState(1);
   const [mirrored, setMirrored] = useState(false);
+  const [duration, setDuration] = useState(0);
+  const [mediaReady, setMediaReady] = useState(false);
 
-  const containerRef = useRef(null); // div that YT replaces with an iframe
-  const playerRef = useRef(null); // YT.Player instance
+  const playerPanelRef = useRef(null);
+  const containerRef   = useRef(null); // div YT replaces with iframe
+  const playerRef      = useRef(null); // YT.Player instance
+  const adapterRef     = useRef(null); // adapter object passed to LoopBar + PlayerControls
 
   function handleLoad() {
     const id = extractVideoId(input.trim());
@@ -52,27 +77,26 @@ export default function YouTubePlayer() {
       if (playerRef.current) {
         playerRef.current.destroy();
         playerRef.current = null;
+        adapterRef.current = null;
+        setMediaReady(false);
       }
 
       playerRef.current = new window.YT.Player(containerRef.current, {
         videoId,
-        playerVars: { rel: 0, modestbranding: 1 },
+        playerVars: { rel: 0, modestbranding: 1, controls: 0 },
         events: {
-          onReady: (e) => {
-            e.target.setPlaybackRate(speed);
+          onReady: () => {
+            adapterRef.current = createYTAdapter(playerRef);
+            setDuration(playerRef.current.getDuration());
+            setMediaReady(true);
           },
         },
       });
     });
   }, [videoId]);
 
-  function handleSpeedChange(s) {
-    setSpeed(s);
-    if (playerRef.current) playerRef.current.setPlaybackRate(s);
-  }
-
   return (
-    <div className="player-panel">
+    <div className="player-panel" ref={playerPanelRef}>
       <div className="url-row">
         <input
           type="text"
@@ -95,20 +119,15 @@ export default function YouTubePlayer() {
             />
           </div>
 
-          <div className="controls">
-            <div className="control-group">
-              <span>Speed</span>
-              {SPEEDS.map((s) => (
-                <button
-                  key={s}
-                  className={speed === s ? "active" : ""}
-                  onClick={() => handleSpeedChange(s)}
-                >
-                  {s}×
-                </button>
-              ))}
-            </div>
+          <LoopBar videoRef={adapterRef} duration={duration} mediaReady={mediaReady} />
+          <PlayerControls
+            videoRef={adapterRef}
+            playerPanelRef={playerPanelRef}
+            duration={duration}
+            mediaReady={mediaReady}
+          />
 
+          <div className="controls">
             <div className="control-group">
               <span>Mirror</span>
               <button onClick={() => setMirrored((m) => !m)}>

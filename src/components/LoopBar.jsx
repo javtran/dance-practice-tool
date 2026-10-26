@@ -17,7 +17,7 @@ function fromMSS(str) {
   return m * 60 + s;
 }
 
-export default function LoopBar({ videoRef, duration }) {
+export default function LoopBar({ videoRef, duration, mediaReady = true }) {
   const [enabled, setEnabled] = useState(false);
   const [loopA, setLoopA] = useState(0);
   const [loopB, setLoopB] = useState(0);
@@ -70,7 +70,7 @@ export default function LoopBar({ videoRef, duration }) {
 
   // Loop enforcement + playhead sync
   useEffect(() => {
-    if (!videoRef.current) return;
+    if (!videoRef.current || !mediaReady) return;
     const id = setInterval(() => {
       const t = videoRef.current.currentTime;
       if (enabled && !videoRef.current.paused && (t >= loopBRef.current || t < loopARef.current)) {
@@ -81,7 +81,7 @@ export default function LoopBar({ videoRef, duration }) {
       }
     }, 100);
     return () => clearInterval(id);
-  }, [enabled]);
+  }, [enabled, mediaReady]);
 
   const getPositionFromMouse = useCallback((clientX) => {
     const rect = barRef.current.getBoundingClientRect();
