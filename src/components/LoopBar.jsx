@@ -106,10 +106,13 @@ export default function LoopBar({ videoRef, duration, mediaReady = true, enabled
   function handleRegionMouseDown(e) {
     e.preventDefault();
     e.stopPropagation();
+    // Record intent to drag region, but don't commit until mouse actually moves.
+    // If mouseup fires with no movement, onMouseUp treats it as a seek click.
     draggingRegion.current = {
       startX: e.clientX,
       startA: loopARef.current,
       startB: loopBRef.current,
+      moved: false,
     };
   }
 
@@ -138,6 +141,10 @@ export default function LoopBar({ videoRef, duration, mediaReady = true, enabled
         const delta =
           ((e.clientX - draggingRegion.current.startX) / rect.width) *
           durationRef.current;
+        if (!draggingRegion.current.moved && Math.abs(e.clientX - draggingRegion.current.startX) > 3) {
+          draggingRegion.current.moved = true;
+        }
+        if (!draggingRegion.current.moved) return;
         const gap =
           draggingRegion.current.startB - draggingRegion.current.startA;
 
@@ -175,6 +182,12 @@ export default function LoopBar({ videoRef, duration, mediaReady = true, enabled
       playheadDragging.current = false;
 
       if (draggingRegion.current) {
+        if (!draggingRegion.current.moved) {
+          // No movement — treat as a seek click to where the user clicked
+          const t = getPositionFromMouse(draggingRegion.current.startX);
+          setPlayhead(t);
+          if (videoRef.current) videoRef.current.currentTime = t;
+        }
         draggingRegion.current = null;
         return;
       }
