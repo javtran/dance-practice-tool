@@ -17,8 +17,14 @@ function fromMSS(str) {
   return m * 60 + s;
 }
 
-export default function LoopBar({ videoRef, duration, mediaReady = true }) {
-  const [enabled, setEnabled] = useState(false);
+export default function LoopBar({ videoRef, duration, mediaReady = true, enabled = false, onEnabledChange }) {
+  // If enabled/onEnabledChange not provided, manage locally (backwards-compat for YouTubePlayer)
+  const [localEnabled, setLocalEnabled] = useState(false);
+  const isControlled = onEnabledChange !== undefined;
+  const effectiveEnabled = isControlled ? enabled : localEnabled;
+  const setEnabled = isControlled
+    ? onEnabledChange
+    : setLocalEnabled;
   const [loopA, setLoopA] = useState(0);
   const [loopB, setLoopB] = useState(0);
   const [inputA, setInputA] = useState("0:00");
@@ -58,7 +64,7 @@ export default function LoopBar({ videoRef, duration, mediaReady = true }) {
 
   // When loop is first enabled, set A/B to 25%/75% of duration
   useEffect(() => {
-    if (enabled && duration > 0) {
+    if (effectiveEnabled && duration > 0) {
       const a = duration * 0.25;
       const b = duration * 0.75;
       updateA(a);
@@ -66,14 +72,14 @@ export default function LoopBar({ videoRef, duration, mediaReady = true }) {
       setInputA(toMSS(a));
       setInputB(toMSS(b));
     }
-  }, [enabled, duration]);
+  }, [effectiveEnabled, duration]);
 
   // Loop enforcement + playhead sync
   useEffect(() => {
     if (!videoRef.current || !mediaReady) return;
     const id = setInterval(() => {
       const t = videoRef.current.currentTime;
-      if (enabled && !videoRef.current.paused && (t >= loopBRef.current || t < loopARef.current)) {
+      if (effectiveEnabled && !videoRef.current.paused && (t >= loopBRef.current || t < loopARef.current)) {
         videoRef.current.currentTime = loopARef.current;
       }
       if (!playheadDragging.current) {
@@ -81,7 +87,7 @@ export default function LoopBar({ videoRef, duration, mediaReady = true }) {
       }
     }, 100);
     return () => clearInterval(id);
-  }, [enabled, mediaReady]);
+  }, [effectiveEnabled, mediaReady]);
 
   const getPositionFromMouse = useCallback((clientX) => {
     const rect = barRef.current.getBoundingClientRect();
@@ -92,6 +98,7 @@ export default function LoopBar({ videoRef, duration, mediaReady = true }) {
   function handleMarkerMouseDown(marker) {
     return (e) => {
       e.preventDefault();
+      e.stopPropagation();
       dragging.current = marker;
     };
   }
@@ -104,6 +111,15 @@ export default function LoopBar({ videoRef, duration, mediaReady = true }) {
       startA: loopARef.current,
       startB: loopBRef.current,
     };
+  }
+
+  function handleBarMouseDown(e) {
+    // Always seek on bar click; child handlers (marker, region, playhead) call stopPropagation
+    e.preventDefault();
+    const t = getPositionFromMouse(e.clientX);
+    setPlayhead(t);
+    if (videoRef.current) videoRef.current.currentTime = t;
+    playheadDragging.current = true;
   }
 
   // Register global mouse listeners once — everything reads from refs
@@ -203,15 +219,14 @@ export default function LoopBar({ videoRef, duration, mediaReady = true }) {
 
   return (
     <div className="loop-bar-wrapper">
-      <button
-        className={`toggle-btn ${enabled ? "active" : ""}`}
-        onClick={() => setEnabled((e) => !e)}
-      >
-        Loop {enabled ? "On" : "Off"}
-      </button>
+      <div className="loop-bar" ref={barRef} onMouseDown={handleBarMouseDown}>
+        {/* Orange progress fill up to playhead */}
+        <div
+          className="loop-progress"
+          style={{ width: `${pctPlayhead}%` }}
+        />
 
-      <div className="loop-bar" ref={barRef}>
-        {enabled && (
+        {effectiveEnabled && (
           <>
             <div
               className="loop-region"
@@ -230,6 +245,7 @@ export default function LoopBar({ videoRef, duration, mediaReady = true }) {
             />
           </>
         )}
+
         <div
           className="loop-playhead"
           style={{ left: `${pctPlayhead}%` }}
@@ -241,7 +257,7 @@ export default function LoopBar({ videoRef, duration, mediaReady = true }) {
         />
       </div>
 
-      {enabled && (
+      {effectiveEnabled && (
         <div className="loop-timestamps">
           <label>
             A:
