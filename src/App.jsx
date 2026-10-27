@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import FilePlayer from './components/FilePlayer'
 import YouTubePlayer from './components/YouTubePlayer'
+import { IconGitHub } from './components/icons'
 
 function App() {
   const [tab, setTab] = useState('file');
@@ -9,7 +10,7 @@ function App() {
     <div className="app">
       <div className="app-inner">
         <header className="app-header">
-          <h1 className="app-title">Dance Practice</h1>
+          <h1 className="app-title">Dance Practice Tool</h1>
           <div className="header-right">
             <div className="source-toggle" role="group" aria-label="Source">
               <button
@@ -37,6 +38,31 @@ function App() {
           {tab === 'file'    && <FilePlayer />}
           {tab === 'youtube' && <YouTubePlayer />}
         </div>
+
+        <footer className="app-footer">
+          <span className="footer-left">
+            Built by <a href="https://www.jackson-tran.com" target="_blank" rel="noreferrer">Jackson Tran</a>
+          </span>
+          <div className="footer-right">
+            <a
+              className="footer-link"
+              href="https://github.com/javtran/dance-practice-tool"
+              target="_blank"
+              rel="noreferrer"
+            >
+<IconGitHub />
+              GitHub
+            </a>
+            <a
+              className="footer-link"
+              href="https://github.com/javtran/dance-practice-tool/issues"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Report a bug
+            </a>
+          </div>
+        </footer>
       </div>
     </div>
   )

@@ -35,13 +35,17 @@ button {
 .app {
   min-height: 100vh;
   padding: 24px 24px 48px;
+  display: flex;
+  flex-direction: column;
 }
 
 .app-inner {
   max-width: 1120px;
+  width: 100%;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
+  flex: 1;
   gap: 20px;
 }
 
@@ -642,4 +646,96 @@ button {
 .loop-region:hover {
   transform: scaleY(1.2);
   background: rgba(255, 107, 74, 0.42);
+}
+
+/* ── YouTube empty-state hero ───────────────────── */
+.yt-input-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 48px 24px;
+  text-align: center;
+  flex: 1;
+}
+
+.yt-input-hint {
+  max-width: 480px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-3);
+}
+
+.yt-input-hero .yt-input-row {
+  justify-content: center;
+}
+
+.yt-input-hero .yt-input {
+  width: 360px;
+}
+
+.yt-input-error {
+  color: var(--accent);
+  font-size: 13px;
+  margin: 0;
+}
+
+.upload-zone-hero {
+  height: 52px;
+  padding: 0 24px;
+  font-size: 14px;
+  border-radius: 12px;
+}
+
+/* ── Tab content ───────────────────────────────── */
+.tab-content {
+  flex: 1;
+}
+
+/* ── Footer ─────────────────────────────────────── */
+.app-footer {
+  margin-top: 8px;
+  padding: 20px 0 8px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.footer-left {
+  font-size: 13px;
+  color: var(--text-3);
+}
+
+.footer-left a {
+  color: var(--text-2);
+  text-decoration: none;
+}
+
+.footer-left a:hover {
+  color: var(--text);
+}
+
+.footer-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.footer-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-3);
+  text-decoration: none;
+  transition: color 150ms;
+}
+
+.footer-link:hover {
+  color: var(--text-2);
 }

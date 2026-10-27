@@ -141,18 +141,38 @@ export default function YouTubePlayer() {
       {/* URL input row — hidden in fullscreen */}
       {!isFs && (
         <>
-          <div className="yt-input-row">
-            <input
-              className="yt-input"
-              type="url"
-              placeholder="Paste a YouTube link"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleLoad()}
-            />
-            <button className="yt-load-btn" onClick={handleLoad}>Load</button>
-          </div>
-          {error && <p style={{ color: "#FF6B4A", fontSize: "13px", margin: 0 }}>{error}</p>}
+          {!videoId ? (
+            <div className="yt-input-hero">
+              <p className="yt-input-hint">Paste a YouTube link to get started. Use the loop bar to mark a section, then adjust speed and mirror to drill the move.</p>
+              <div className="yt-input-row">
+                <input
+                  className="yt-input"
+                  type="url"
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleLoad()}
+                />
+                <button className="yt-load-btn" onClick={handleLoad}>Load</button>
+              </div>
+              {error && <p className="yt-input-error">{error}</p>}
+            </div>
+          ) : (
+            <>
+              <div className="yt-input-row">
+                <input
+                  className="yt-input"
+                  type="url"
+                  placeholder="Paste a YouTube link"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleLoad()}
+                />
+                <button className="yt-load-btn" onClick={handleLoad}>Load</button>
+              </div>
+              {error && <p className="yt-input-error">{error}</p>}
+            </>
+          )}
         </>
       )}
 

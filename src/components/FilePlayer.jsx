@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from "react";
+import { IconVideo, IconUpload, IconAudioPlaceholder } from "./icons";
 import LoopBar from "./LoopBar";
 import PlayerControls from "./PlayerControls";
 
@@ -68,15 +69,12 @@ export default function FilePlayer() {
       onMouseMove={isFs ? resetHideTimer : undefined}
       style={{ cursor: isFs && !controlsVisible ? "none" : undefined }}
     >
-      {/* File picker / chip — shown above the video */}
-      {!isFs && (
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          {src ? (
+      {/* File picker */}
+      {!isFs && ( 
+        src ? (
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <div className="file-chip">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9A9BA3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="5" width="13" height="14" rx="2"/>
-                <path d="M16 10l5-3v10l-5-3"/>
-              </svg>
+              <IconVideo />
               <span className="file-chip-name">{fileName}</span>
               <button className="file-chip-btn" onClick={() => fileInputRef.current?.click()}>
                 Change
@@ -89,13 +87,12 @@ export default function FilePlayer() {
                 onChange={handleFileChange}
               />
             </div>
-          ) : (
-            <label className="upload-zone">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
-                <polyline points="17 8 12 3 7 8"/>
-                <line x1="12" y1="3" x2="12" y2="15"/>
-              </svg>
+          </div>
+        ) : (
+          <div className="yt-input-hero">
+            <p className="yt-input-hint">Upload a video or audio file to get started. Use the loop bar to mark a section, then adjust speed and mirror to drill the move.</p>
+            <label className="upload-zone upload-zone-hero">
+              <IconUpload />
               Choose a video or audio file
               <input
                 type="file"
@@ -103,14 +100,15 @@ export default function FilePlayer() {
                 onChange={handleFileChange}
               />
             </label>
-          )}
-        </div>
+          </div>
+        )
       )}
 
       {src && (
         <>
-          {/* Grid stack: video-area and badge-overlay share the same cell */}
+          {/* Grid stack: video-area and badge-overlay*/}
           <div className="yt-video-stack">
+            {/* video area */}
             <div className="video-area">
               {fileType === "video" ? (
                 <video
@@ -132,15 +130,11 @@ export default function FilePlayer() {
                     controls={false}
                     onLoadedMetadata={() => setDuration(videoRef.current.duration)}
                   />
-                  <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#3A3B44" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M9 18V5l12-2v13"/>
-                    <circle cx="6" cy="18" r="3"/>
-                    <circle cx="18" cy="16" r="3"/>
-                  </svg>
+                  <IconAudioPlaceholder />
                 </div>
               )}
             </div>
-            {/* Badge overlay: outside overflow:hidden, not inside mirrored element */}
+            {/* Badge overlay*/}
             <div className="yt-badge-overlay">
               {mirrored && fileType === "video" && (
                 <div className="video-mirror-badge">Mirrored</div>
@@ -151,7 +145,7 @@ export default function FilePlayer() {
             </div>
           </div>
 
-          {/* Controls — fade out in fullscreen when inactive */}
+          {/* Controls */}
           <div
             className="fs-overlay"
             style={isFs ? {
