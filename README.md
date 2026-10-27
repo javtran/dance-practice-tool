@@ -1,16 +1,49 @@
-# React + Vite
+# Dance Practice Tool
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A browser-based tool for drilling choreography. Load a video file or paste a YouTube link, then slow it down, mirror it, and loop a specific section — all without leaving the page.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **File player** — upload any video or audio file; plays directly in the browser via blob URLs (no upload, no server)
+- **YouTube player** — paste any YouTube link and control playback with the same interface
+- **Speed control** — 0.25× to 2.0× in 0.05× steps via a smooth slider
+- **Mirror** — flip the video horizontally so you can learn from a mirror perspective
+- **A/B loop** — drag two markers on a timeline to set a loop region; the player snaps back to A whenever playback reaches B
+- **Draggable playhead** — seek by dragging directly on the loop bar timeline
+- **Fullscreen** — custom overlay UI that fades out when inactive, with frosted-glass controls at the bottom
+- **Status badges** — "Mirrored" and speed badges overlaid on the video corner in both normal and fullscreen views
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- React + Vite
+- Vanilla CSS (no UI library)
+- YouTube IFrame API (via adapter pattern — shared controls work identically for both file and YouTube playback)
 
-## Expanding the ESLint configuration
+## Getting Started
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```bash
+nvm use 20        # Node 20+ required
+npm install
+npm run dev
+```
+
+> **Note:** `create-vite@9` requires Node 20+. If you see a `styleText` error, run `nvm install 20 && nvm alias default 20`.
+
+## Project Structure
+
+```
+src/
+  components/
+    FilePlayer.jsx       # File/audio player
+    YouTubePlayer.jsx    # YouTube IFrame API player
+    LoopBar.jsx          # Draggable A/B loop timeline
+    PlayerControls.jsx   # Play/pause, volume, speed, mirror, fullscreen
+  index.css              # All styles (design tokens, layout, fullscreen)
+  App.jsx                # Tab toggle between File and YouTube modes
+  main.jsx
+```
+
+## Planned
+
+- BPM detector (Web Audio API)
+- Beat counter / metronome with adjustable 1–8 count overlay
