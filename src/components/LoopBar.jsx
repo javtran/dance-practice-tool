@@ -112,7 +112,7 @@ export default function LoopBar({ videoRef, duration, mediaReady = true, enabled
     if (!videoRef.current || !mediaReady) return;
     const id = setInterval(() => {
       const t = videoRef.current.currentTime;
-      if (effectiveEnabled && t >= loopBRef.current || t < loopARef.current) {
+      if (effectiveEnabled && (t >= loopBRef.current || t < loopARef.current)) {
         videoRef.current.currentTime = loopARef.current;
       }
       if (!playheadDragging.current) {
