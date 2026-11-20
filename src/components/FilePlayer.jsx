@@ -1,6 +1,7 @@
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
 import { IconVideo, IconUpload, IconAudioPlaceholder } from "./icons";
 import LoopBar from "./LoopBar";
+import ShortcutsLegend from "./ShortcutsLegend";
 import PlayerControls from "./PlayerControls";
 
 /**
@@ -22,12 +23,31 @@ import PlayerControls from "./PlayerControls";
  * hideTimerRef:    RefObject<ReturnType<typeof setTimeout>>       - handle for the controls hide timer; cleared on mouse activity
  * isFsRef:         RefObject<boolean>                             - mirror of isFs state; gives resetHideTimer stale-closure-free access to the current fullscreen value
  */
-export default function FilePlayer() {
+const FilePlayer = forwardRef(function FilePlayer(_, ref) {
   const videoRef = useRef(null);
   const playerPanelRef = useRef(null);
   const fileInputRef = useRef(null);
   const hideTimerRef = useRef(null);
   const isFsRef = useRef(false);
+
+  // Imperative handle — exposes playback controls to App.jsx keyboard handler
+  useImperativeHandle(ref, () => ({
+    play:             () => videoRef.current?.play(),
+    pause:            () => videoRef.current?.pause(),
+    seek:             (t) => { if (videoRef.current) videoRef.current.currentTime = Math.max(0, Math.min(t, videoRef.current.duration)); },
+    getTime:          () => videoRef.current?.currentTime ?? 0,
+    getDuration:      () => videoRef.current?.duration ?? 0,
+    toggleMute:       () => { if (videoRef.current) videoRef.current.muted = !videoRef.current.muted; },
+    getVolume:        () => videoRef.current?.volume ?? 0.8,
+    setVolume:        (v) => { if (videoRef.current) { videoRef.current.volume = v; if (v > 0) videoRef.current.muted = false; } },
+    toggleLoop:       () => setLoopEnabled((e) => !e),
+    toggleFullscreen: () => {
+      const el = playerPanelRef.current;
+      if (!el) return;
+      document.fullscreenElement ? document.exitFullscreen() : el.requestFullscreen();
+    },
+    isPaused: () => videoRef.current?.paused ?? true,
+  }), []);
 
   const [src, setSrc] = useState(null);
   const [fileName, setFileName] = useState(null);
@@ -220,8 +240,11 @@ export default function FilePlayer() {
               onLoopToggle={() => setLoopEnabled((e) => !e)}
             />
           </div>
+          {!isFs && <ShortcutsLegend />}
         </>
       )}
     </div>
   );
-}
+});
+
+export default FilePlayer;

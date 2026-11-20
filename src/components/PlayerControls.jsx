@@ -53,14 +53,20 @@ export default function PlayerControls({
     const onPlay  = () => setPlaying(true);
     const onPause = () => setPlaying(false);
     const onClick = () => video.paused ? video.play() : video.pause();
+    const onVolumeChange = () => {
+      setMuted(video.muted);
+      if (!video.muted) setVolume(video.volume);
+    };
     video.addEventListener("play", onPlay);
     video.addEventListener("pause", onPause);
     video.addEventListener("click", onClick);
+    video.addEventListener("volumechange", onVolumeChange);
     video.style.cursor = "pointer";
     return () => {
       video.removeEventListener("play", onPlay);
       video.removeEventListener("pause", onPause);
       video.removeEventListener("click", onClick);
+      video.removeEventListener("volumechange", onVolumeChange);
     };
   }, [mediaReady]);
 
@@ -71,6 +77,9 @@ export default function PlayerControls({
       if (!videoRef.current) return;
       setCurrentTime(videoRef.current.currentTime);
       setPlaying(!videoRef.current.paused);
+      // Keep mute/volume in sync for YT adapter (no volumechange DOM event)
+      setMuted(videoRef.current.muted);
+      if (!videoRef.current.muted) setVolume(videoRef.current.volume);
     }, 100);
     return () => clearInterval(id);
   }, [mediaReady]);

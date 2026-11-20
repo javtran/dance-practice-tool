@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from "react";
 import LoopBar from "./LoopBar";
+import ShortcutsLegend from "./ShortcutsLegend";
 import PlayerControls from "./PlayerControls";
 
 // Load the YouTube IFrame API
@@ -95,7 +96,7 @@ function createYTAdapter(playerRef) {
  * playerRef:      RefObject<YT.Player>      - the YT.Player instance; used to call YouTube's playback API methods
  * adapterRef:     RefObject<object>         - YT adapter wrapping YT.Player behind a native <video>-like interface; passed to LoopBar and PlayerControls
  */
-export default function YouTubePlayer() {
+const YouTubePlayer = forwardRef(function YouTubePlayer(_, ref) {
   const [input, setInput] = useState("");
   const [videoId, setVideoId] = useState(null);
   const [error, setError] = useState("");
@@ -113,6 +114,25 @@ export default function YouTubePlayer() {
   const containerRef = useRef(null);
   const playerRef = useRef(null);
   const adapterRef = useRef(null);
+
+  // Imperative handle — exposes playback controls to App.jsx keyboard handler
+  useImperativeHandle(ref, () => ({
+    play:             () => adapterRef.current?.play(),
+    pause:            () => adapterRef.current?.pause(),
+    seek:             (t) => { if (adapterRef.current) adapterRef.current.currentTime = Math.max(0, Math.min(t, adapterRef.current.duration)); },
+    getTime:          () => adapterRef.current?.currentTime ?? 0,
+    getDuration:      () => adapterRef.current?.duration ?? 0,
+    toggleMute:       () => { if (adapterRef.current) adapterRef.current.muted = !adapterRef.current.muted; },
+    getVolume:        () => adapterRef.current?.volume ?? 0.8,
+    setVolume:        (v) => { if (adapterRef.current) { adapterRef.current.volume = v; if (v > 0) adapterRef.current.muted = false; } },
+    toggleLoop:       () => setLoopEnabled((e) => !e),
+    toggleFullscreen: () => {
+      const el = playerPanelRef.current;
+      if (!el) return;
+      document.fullscreenElement ? document.exitFullscreen() : el.requestFullscreen();
+    },
+    isPaused: () => adapterRef.current?.paused ?? true,
+  }), []);
 
   // Track fullscreen state — keep a ref in sync so the timer callback is never stale
   useEffect(() => {
@@ -299,8 +319,11 @@ export default function YouTubePlayer() {
               onLoopToggle={() => setLoopEnabled((e) => !e)}
             />
           </div>
+          {!isFs && <ShortcutsLegend />}
         </>
       )}
     </div>
   );
-}
+});
+
+export default YouTubePlayer;
