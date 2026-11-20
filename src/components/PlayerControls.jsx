@@ -1,12 +1,33 @@
 import { useState, useEffect } from "react";
 import { IconPlay, IconPause, IconVolume, IconLoop, IconMirror, IconFullscreen } from "./icons";
 
+// convert seconds to m:ss string format
 function toMSS(seconds) {
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60).toString().padStart(2, "0");
   return `${m}:${s}`;
 }
 
+/**
+ * 
+ * @param {object} videoRef:         ref to the media element (or YT adapter); used to read/set playback state
+ * @param {object} playerPanelRef:   ref to the player panel div; passed to the Fullscreen API
+ * @param {number} duration:         total video duration in seconds
+ * @param {boolean} mediaReady:      whether the media is loaded and controls should be enabled
+ * @param {boolean} mirrored:        whether the video is currently mirrored
+ * @param {function} onMirrorToggle: callback to toggle mirror state in the parent
+ * @param {function} onSpeedChange:  callback fired with the new speed value when user changes speed
+ * @param {boolean} loopEnabled:     whether loop mode is active
+ * @param {function} onLoopToggle:   callback to toggle loop mode in the parent
+ * 
+ * playing:     boolean — true while the media is playing; drives the play/pause icon
+ * currentTime: number  — current playback position in seconds; updates on timeupdate event
+ * volume:      number  — current volume 0–1; shown in the volume slider
+ * muted:       boolean — whether audio is muted; drives the volume icon
+ * speed:       number  — current playback rate (default 1.0); local copy for the speed display
+ * isFs:        boolean — whether the player panel is in fullscreen       
+ * @returns 
+ */
 export default function PlayerControls({
   videoRef,
   playerPanelRef,

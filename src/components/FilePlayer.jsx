@@ -3,10 +3,32 @@ import { IconVideo, IconUpload, IconAudioPlaceholder } from "./icons";
 import LoopBar from "./LoopBar";
 import PlayerControls from "./PlayerControls";
 
+/**
+ * STATE
+ * src:             string            - blob URL of the loaded file; null until a file is selected
+ * fileName:        string            - display name of the loaded file
+ * mirrored:        boolean           - whether the video is horizontally flipped
+ * fileType:        "audio" | "video" - media type of the loaded file; determines which element to render
+ * duration:        number            - total media duration in seconds; set once the media is loaded
+ * speed:           number            - current playback rate (default 1.0)
+ * loopEnabled:     boolean           - whether loop mode is active
+ * isFs:            boolean           - whether the player panel is in fullscreen
+ * controlsVisible: boolean           - true by default; set to false after 5s idle in fullscreen, reset to true on mouse activity
+ *
+ * REFS
+ * videoRef:        RefObject<HTMLVideoElement | HTMLAudioElement> - the media element; used to control playback and seek
+ * playerPanelRef:  RefObject<HTMLDivElement>                      - the player panel div; passed to the Fullscreen API in PlayerControls
+ * fileInputRef:    RefObject<HTMLInputElement>                    - the hidden file input; .click() is called on it to open the file picker
+ * hideTimerRef:    RefObject<ReturnType<typeof setTimeout>>       - handle for the controls hide timer; cleared on mouse activity
+ * isFsRef:         RefObject<boolean>                             - mirror of isFs state; gives resetHideTimer stale-closure-free access to the current fullscreen value
+ */
 export default function FilePlayer() {
   const videoRef = useRef(null);
   const playerPanelRef = useRef(null);
   const fileInputRef = useRef(null);
+  const hideTimerRef = useRef(null);
+  const isFsRef = useRef(false);
+
   const [src, setSrc] = useState(null);
   const [fileName, setFileName] = useState(null);
   const [mirrored, setMirrored] = useState(false);
@@ -16,8 +38,6 @@ export default function FilePlayer() {
   const [loopEnabled, setLoopEnabled] = useState(false);
   const [isFs, setIsFs] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
-  const hideTimerRef = useRef(null);
-  const isFsRef = useRef(false);
 
   // Track fullscreen state — keep a ref in sync so the timer callback is never stale
   useEffect(() => {
@@ -28,7 +48,10 @@ export default function FilePlayer() {
       if (fs) {
         // Entered fullscreen — start the hide timer immediately
         clearTimeout(hideTimerRef.current);
-        hideTimerRef.current = setTimeout(() => setControlsVisible(false), 5000);
+        hideTimerRef.current = setTimeout(
+          () => setControlsVisible(false),
+          5000,
+        );
       } else {
         // Left fullscreen — always show controls
         clearTimeout(hideTimerRef.current);
@@ -36,6 +59,8 @@ export default function FilePlayer() {
       }
     };
     document.addEventListener("fullscreenchange", onChange);
+
+    // clear off hide timer if not in full screen
     return () => {
       document.removeEventListener("fullscreenchange", onChange);
       clearTimeout(hideTimerRef.current);
@@ -50,6 +75,7 @@ export default function FilePlayer() {
     hideTimerRef.current = setTimeout(() => setControlsVisible(false), 5000);
   }, []);
 
+  // set all needed data when file changed
   function handleFileChange(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -70,13 +96,16 @@ export default function FilePlayer() {
       style={{ cursor: isFs && !controlsVisible ? "none" : undefined }}
     >
       {/* File picker */}
-      {!isFs && ( 
-        src ? (
+      {!isFs &&
+        (src ? (
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <div className="file-chip">
               <IconVideo />
               <span className="file-chip-name">{fileName}</span>
-              <button className="file-chip-btn" onClick={() => fileInputRef.current?.click()}>
+              <button
+                className="file-chip-btn"
+                onClick={() => fileInputRef.current?.click()}
+              >
                 Change
               </button>
               <input
@@ -90,7 +119,10 @@ export default function FilePlayer() {
           </div>
         ) : (
           <div className="yt-input-hero">
-            <p className="yt-input-hint">Upload a video or audio file to get started. Use the loop bar to mark a section, then adjust speed and mirror to drill the move.</p>
+            <p className="yt-input-hint">
+              Upload a video or audio file to get started. Use the loop bar to
+              mark a section, then adjust speed and mirror to drill the move.
+            </p>
             <label className="upload-zone upload-zone-hero">
               <IconUpload />
               Choose a video or audio file
@@ -101,8 +133,7 @@ export default function FilePlayer() {
               />
             </label>
           </div>
-        )
-      )}
+        ))}
 
       {src && (
         <>
@@ -115,20 +146,34 @@ export default function FilePlayer() {
                   ref={videoRef}
                   src={src}
                   style={{
-                    width: "100%", height: "100%", objectFit: "contain",
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "contain",
                     transform: mirrored ? "scaleX(-1)" : "none",
-                    transition: "transform 200ms ease"
+                    transition: "transform 200ms ease",
                   }}
-                  onLoadedMetadata={() => setDuration(videoRef.current.duration)}
+                  onLoadedMetadata={() =>
+                    setDuration(videoRef.current.duration)
+                  }
                 />
               ) : (
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: "100%" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: "100%",
+                    height: "100%",
+                  }}
+                >
                   <audio
                     ref={videoRef}
                     src={src}
                     style={{ width: "80%" }}
                     controls={false}
-                    onLoadedMetadata={() => setDuration(videoRef.current.duration)}
+                    onLoadedMetadata={() =>
+                      setDuration(videoRef.current.duration)
+                    }
                   />
                   <IconAudioPlaceholder />
                 </div>
@@ -139,20 +184,22 @@ export default function FilePlayer() {
               {mirrored && fileType === "video" && (
                 <div className="video-mirror-badge">Mirrored</div>
               )}
-              {speed !== 1 && (
-                <div className="video-speed-badge">{speed}×</div>
-              )}
+              {speed !== 1 && <div className="video-speed-badge">{speed}×</div>}
             </div>
           </div>
 
           {/* Controls */}
           <div
             className="fs-overlay"
-            style={isFs ? {
-              opacity: controlsVisible ? 1 : 0,
-              transition: "opacity 400ms ease",
-              pointerEvents: controlsVisible ? "all" : "none",
-            } : undefined}
+            style={
+              isFs
+                ? {
+                    opacity: controlsVisible ? 1 : 0,
+                    transition: "opacity 400ms ease",
+                    pointerEvents: controlsVisible ? "all" : "none",
+                  }
+                : undefined
+            }
           >
             <LoopBar
               videoRef={videoRef}
@@ -165,10 +212,12 @@ export default function FilePlayer() {
               playerPanelRef={playerPanelRef}
               duration={duration}
               mirrored={mirrored}
-              onMirrorToggle={fileType === "video" ? () => setMirrored(m => !m) : null}
+              onMirrorToggle={
+                fileType === "video" ? () => setMirrored((m) => !m) : null
+              }
               onSpeedChange={setSpeed}
               loopEnabled={loopEnabled}
-              onLoopToggle={() => setLoopEnabled(e => !e)}
+              onLoopToggle={() => setLoopEnabled((e) => !e)}
             />
           </div>
         </>

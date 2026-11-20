@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
+// convert seconds to string format M:SS for display
 function toMSS(seconds) {
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60)
@@ -8,6 +9,7 @@ function toMSS(seconds) {
   return `${m}:${s}`;
 }
 
+// convert from M:SS to seconds
 function fromMSS(str) {
   const parts = str.split(":");
   if (parts.length !== 2) return null;
@@ -17,6 +19,33 @@ function fromMSS(str) {
   return m * 60 + s;
 }
 
+/**
+ * 
+ * @param {object} videoRef:          ref to the media element (or YT adapter); used to seek and read currentTime
+ * @param {number} duration:          total video duration in seconds
+ * @param {boolean} mediaReady:       whether the media is loaded and the loop bar should be interactive
+ * @param {boolean} enabled:          if loop mode is activated
+ * @param {function} onEnabledChange: set function for enabled
+ * 
+ * localEnabled:      boolean   - local state for enabled if not pass as parameter
+ * isControlled:      boolean   - true when enabled prop is passed; switches between controlled/uncontrolled
+ * effectiveEnabled:  boolean   - the enabled value actually used; enabled prop if controlled, else localEnabled
+ * setEnabled:        function  - the setter actually used; onEnabledChange if controlled, else setLocalEnabled
+ * loopA:             number    - loop start marker position in seconds
+ * loopB:             number    - loop end marker position in seconds
+ * inputA:            string    - text field value for loop A in "M:SS" format
+ * inputB:            string    - text field value for loop B in "M:SS" format
+ * playhead           number    - current playback position in seconds
+ * 
+ * barRef:            RefObject<HTMLDivElement>       - the loop bar element; used for getBoundingClientRect on mouse events
+ * dragging:          RefObject<"A" | "B" | null>     - which marker is currently being dragged
+ * draggingRegion:    RefObject<{ startX: number, startA: number, startB: number, moved: boolean } | null> - region dragging information
+ * playheadDragging:  RefObject<boolean>              - true while the playhead is being dragged
+ * loopARef:          RefObject<number>               - ref kept in sync with loopA state for use in callbacks
+ * loopBRef:          RefObject<number>               - ref kept in sync with loopB state for use in callbacks
+ * durationRef:       RefObject<number>               - ref kept in sync with duration prop for use in callbacks
+ * @returns 
+ */
 export default function LoopBar({ videoRef, duration, mediaReady = true, enabled = false, onEnabledChange }) {
   // If enabled/onEnabledChange not provided, manage locally (backwards-compat for YouTubePlayer)
   const [localEnabled, setLocalEnabled] = useState(false);
@@ -44,19 +73,21 @@ export default function LoopBar({ videoRef, duration, mediaReady = true, enabled
     durationRef.current = duration;
   }, [duration]);
 
-  // Sync refs whenever state changes (e.g. on enable)
+  // Sync refs whenever marker A/B changes.
   useEffect(() => {
     loopARef.current = loopA;
   }, [loopA]);
+
   useEffect(() => {
     loopBRef.current = loopB;
   }, [loopB]);
 
-  // Helper: update both state and ref together
+  // function to update both state and ref
   function updateA(val) {
     loopARef.current = val;
     setLoopA(val);
   }
+
   function updateB(val) {
     loopBRef.current = val;
     setLoopB(val);
@@ -74,12 +105,14 @@ export default function LoopBar({ videoRef, duration, mediaReady = true, enabled
     }
   }, [effectiveEnabled, duration]);
 
-  // Loop enforcement + playhead sync
+  // Loop enforcement
+  // set currenttime and playhead to marker A if out of loop region
+  // function checks every second
   useEffect(() => {
     if (!videoRef.current || !mediaReady) return;
     const id = setInterval(() => {
       const t = videoRef.current.currentTime;
-      if (effectiveEnabled && !videoRef.current.paused && (t >= loopBRef.current || t < loopARef.current)) {
+      if (effectiveEnabled && t >= loopBRef.current || t < loopARef.current) {
         videoRef.current.currentTime = loopARef.current;
       }
       if (!playheadDragging.current) {
@@ -89,12 +122,14 @@ export default function LoopBar({ videoRef, duration, mediaReady = true, enabled
     return () => clearInterval(id);
   }, [effectiveEnabled, mediaReady]);
 
+  // Get mouse position relative to the playbar
   const getPositionFromMouse = useCallback((clientX) => {
     const rect = barRef.current.getBoundingClientRect();
     const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
     return ratio * durationRef.current;
   }, []);
 
+  // setting which marker user is dragging
   function handleMarkerMouseDown(marker) {
     return (e) => {
       e.preventDefault();
@@ -103,6 +138,7 @@ export default function LoopBar({ videoRef, duration, mediaReady = true, enabled
     };
   }
 
+  // record initial info of markers, mouse position, if mouse moved
   function handleRegionMouseDown(e) {
     e.preventDefault();
     e.stopPropagation();
@@ -116,6 +152,7 @@ export default function LoopBar({ videoRef, duration, mediaReady = true, enabled
     };
   }
 
+  // handles clicking directly on the loop bar background to seek the video (NOT dragging loop region)
   function handleBarMouseDown(e) {
     // Always seek on bar click; child handlers (marker, region, playhead) call stopPropagation
     e.preventDefault();
